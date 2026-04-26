@@ -236,6 +236,8 @@ pub struct AppPreferences {
     pub gh_cli_source: String, // GitHub CLI source: "jean" (managed) or "path" (system PATH)
     #[serde(default)]
     pub expand_tool_calls_by_default: bool, // Expand all tool call collapsibles by default (default: false)
+#[serde(default)]
+pub bypass_claude_auth: bool, // Skip Claude CLI login check (for custom CLI binaries like claude.ccr)
 }
 
 fn default_true() -> Option<bool> {
@@ -1471,6 +1473,7 @@ impl Default for AppPreferences {
             opencode_cli_source: default_cli_source(),
             gh_cli_source: default_cli_source(),
             expand_tool_calls_by_default: false,
+            bypass_claude_auth: false,
         }
     }
 }
