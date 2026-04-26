@@ -11,7 +11,7 @@ pub const CLI_DIR_NAME: &str = "claude-cli";
 #[cfg(windows)]
 pub const CLI_BINARY_NAME: &str = "claude.exe";
 #[cfg(not(windows))]
-pub const CLI_BINARY_NAME: &str = "claude";
+pub const CLI_BINARY_NAME: &str = "claude.ccr";
 
 /// Get the directory where Claude CLI is installed
 ///
@@ -60,7 +60,7 @@ pub fn resolve_cli_binary(app: &AppHandle) -> PathBuf {
             "which"
         };
 
-        if let Ok(output) = silent_command(which_cmd).arg("claude").output() {
+        if let Ok(output) = silent_command(which_cmd).arg(CLI_BINARY_NAME).output() {
             if output.status.success() {
                 // On Windows, `where` can return multiple paths; take only the first line
                 let path_str = String::from_utf8_lossy(&output.stdout)
