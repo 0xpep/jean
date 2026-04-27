@@ -9896,6 +9896,64 @@ pub async fn list_worktree_file_tree(
     })
 }
 
+#[tauri::command]
+pub async fn search_worktree_files(
+    app: AppHandle,
+    worktree_id: String,
+    query: String,
+) -> Result<Vec<FileSearchResult>, String> {
+    let root = resolve_worktree_root(&app, &worktree_id)?;
+
+    let output = silent_command("fd")
+        .arg("--type")
+        .arg("f")
+        .arg("--type")
+        .arg("d")
+        .arg("--all")
+        .arg("--git-ignore")
+        .arg(&query)
+        .current_dir(&root)
+        .output()
+        .map_err(|e| format!("Failed to run fd: {e}"))?;
+
+    if !output.status.success() {
+        // fd returns 1 if no matches found, which is not an error for us
+        if output.status.code() == Some(1) {
+            return Ok(Vec::new());
+        }
+        return Err(format!(
+            "fd failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        ));
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let results = stdout
+        .lines()
+        .filter(|line| !line.is_empty())
+        .map(|line| {
+            let abs_path = root.join(line);
+            let name = abs_path
+                .file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_string();
+            FileSearchResult {
+                relative_path: line.to_string(),
+                name,
+                node_type: if abs_path.is_dir() {
+                    "directory"
+                } else {
+                    "file"
+                }
+                .to_string(),
+            }
+        })
+        .collect();
+
+    Ok(results)
+}
+
 fn is_markdown_path(path: &Path) -> bool {
     matches!(
         path.extension().and_then(|ext| ext.to_str()),

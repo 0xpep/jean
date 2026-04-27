@@ -3047,6 +3047,7 @@ pub fn run() {
             projects::get_github_repo_url,
             projects::list_worktree_files,
             projects::list_worktree_file_tree,
+            projects::search_worktree_files,
             projects::get_project_branches,
             projects::update_project_settings,
             projects::get_jean_config,

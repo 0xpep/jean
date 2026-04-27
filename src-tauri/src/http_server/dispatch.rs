@@ -413,6 +413,13 @@ pub async fn dispatch_command(
                     .await?;
             to_value(result)
         }
+        "search_worktree_files" => {
+            let worktree_id: String = field(&args, "worktreeId", "worktree_id")?;
+            let query: String = from_field(&args, "query")?;
+            let result =
+                crate::projects::search_worktree_files(app.clone(), worktree_id, query).await?;
+            to_value(result)
+        }
 
         // =====================================================================
         // GitHub Issues & PRs
