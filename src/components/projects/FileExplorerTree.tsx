@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { FileTreeNode } from '@/types/file-explorer'
 import { ChevronRight, ChevronDown, File, Folder, FileText } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -9,7 +9,22 @@ interface FileExplorerTreeProps {
 }
 
 export function FileExplorerTree({ nodes, onFileClick }: FileExplorerTreeProps) {
-  const [collapsedPaths, setCollapsedPaths] = useState<Set<string>>(new Set())
+  const [collapsedPaths, setCollapsedPaths] = useState<Set<string>>(() => {
+    if (typeof window === 'undefined') return new Set()
+    const stored = sessionStorage.getItem('__file_explorer_expanded__')
+    if (stored) {
+      try {
+        return new Set(JSON.parse(stored))
+      } catch {
+        return new Set()
+      }
+    }
+    return new Set()
+  })
+
+  useEffect(() => {
+    sessionStorage.setItem('__file_explorer_expanded__', JSON.stringify([...collapsedPaths]))
+  }, [collapsedPaths])
 
   const toggleCollapse = (path: string) => {
     const next = new Set(collapsedPaths)
