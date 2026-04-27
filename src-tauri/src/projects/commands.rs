@@ -9835,9 +9835,55 @@ pub async fn revert_last_local_commit(
     })
 }
 
+fn is_markdown_path(path: &Path) -> bool {
+    matches!(
+        path.extension().and_then(|ext| ext.to_str()),
+        Some("md") | Some("markdown")
+    )
+}
+
+fn normalize_relative_worktree_path(input: &str) -> Result<PathBuf, String> {
+    let path = PathBuf::from(input);
+    if path.is_absolute() {
+        return Err("Path must be relative to worktree root".to_string());
+    }
+
+    if path
+        .components()
+        .any(|component| matches!(component, std::path::Component::ParentDir))
+    {
+        return Err("Path cannot escape worktree root".to_string());
+    }
+
+    Ok(path)
+}
+
+fn resolve_worktree_root(app: &AppHandle, worktree_id: &str) -> Result<PathBuf, String> {
+    let data = load_projects_data(app)?;
+    let worktree = data
+        .worktrees
+        .iter()
+        .find(|w| w.id == worktree_id)
+        .ok_or_else(|| format!("Worktree not found: {worktree_id}"))?;
+    Ok(PathBuf::from(&worktree.path))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn markdown_extensions_are_allowed() {
+        assert!(is_markdown_path(Path::new("README.md")));
+        assert!(is_markdown_path(Path::new("docs/notes.markdown")));
+        assert!(!is_markdown_path(Path::new("src/main.rs")));
+    }
+
+    #[test]
+    fn rejects_parent_escape_segments() {
+        assert!(normalize_relative_worktree_path("../secret.md").is_err());
+        assert!(normalize_relative_worktree_path("docs/../../secret.md").is_err());
+    }
 
     #[test]
     fn test_sanitize_folder_name() {
