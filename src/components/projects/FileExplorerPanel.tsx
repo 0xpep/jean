@@ -25,7 +25,11 @@ export function FileExplorerPanel({ worktreeId, className }: FileExplorerPanelPr
   )
 
   const handleFileClick = (path: string) => {
-    if (path.endsWith('.md') || path.endsWith('.markdown')) {
+    const editableExtensions = [
+      'md', 'markdown', 'txt', 'json', 'yaml', 'yml', 'py', 'ts', 'tsx', 'js', 'jsx', 'go', 'rs'
+    ]
+    const ext = path.split('.').pop()?.toLowerCase()
+    if (editableExtensions.includes(ext)) {
       setEditingFile(path)
     }
   }
