@@ -4,6 +4,7 @@ import {
   ExternalLink,
   FolderOpen,
   GitMerge,
+  GitBranch,
   GitPullRequest,
   Shield,
   ShieldAlert,
@@ -79,8 +80,11 @@ interface DesktopToolbarControlsProps {
   prUrl: string | undefined
   prNumber: number | undefined
   displayStatus: PrDisplayStatus | undefined
+  branchDiffAdded: number
+  branchDiffRemoved: number
   checkStatus: CheckStatus | undefined
   mergeableStatus: MergeableStatus | undefined
+  onBranchDiffClick: () => void
   activeWorktreePath: string | undefined
 
   availableMcpServers: McpServerInfo[]
@@ -487,6 +491,32 @@ export function DesktopToolbarControls({
             </TooltipTrigger>
             <TooltipContent>
               PR has merge conflicts — click to resolve
+            </TooltipContent>
+          </Tooltip>
+        </>
+      )}
+
+      {(branchDiffAdded > 0 || branchDiffRemoved > 0) && (
+        <>
+          <div className="hidden @xl:block h-4 w-px bg-border/50" />
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                className="hidden @xl:flex h-8 items-center gap-1.5 px-3 text-xs font-medium text-amber-600 dark:text-amber-400 transition-colors cursor-pointer hover:bg-muted/80"
+                onClick={onBranchDiffClick}
+              >
+                <GitBranch className="h-3 w-3" />
+                <span>Branch diff</span>
+                <span className="ml-1">
+                  <span className="text-green-500">+{branchDiffAdded}</span>
+                  {' / '}
+                  <span className="text-red-500">-{branchDiffRemoved}</span>
+                </span>
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>
+              Branch diff — click to view
             </TooltipContent>
           </Tooltip>
         </>
