@@ -418,6 +418,8 @@ export const ChatToolbar = memo(function ChatToolbar({
           prUrl={prUrl}
           prNumber={prNumber}
           displayStatus={displayStatus}
+          branchDiffAdded={branchDiffAdded}
+          branchDiffRemoved={branchDiffRemoved}
           checkStatus={checkStatus}
           mergeableStatus={mergeableStatus}
           activeWorktreePath={activeWorktreePath}
@@ -458,6 +460,7 @@ export const ChatToolbar = memo(function ChatToolbar({
           handleViewAdvisory={handleViewAdvisory}
           handleViewLinear={handleViewLinear}
           handleViewSavedContext={handleViewSavedContext}
+          onBranchDiffClick={handleBranchDiffClick}
         />
 
         <div className="h-4 w-px shrink-0 bg-border/50" />
