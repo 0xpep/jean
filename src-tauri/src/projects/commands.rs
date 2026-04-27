@@ -39,11 +39,11 @@ use super::release_notes::{
 };
 use super::storage::{get_project_worktrees_dir, load_projects_data, save_projects_data};
 use super::types::{
-    JeanConfig, MergeType, Project, SessionType, Worktree, WorktreeArchivedEvent,
-    WorktreeBranchExistsEvent, WorktreeCreateErrorEvent, WorktreeCreatedEvent,
-    WorktreeCreatingEvent, WorktreeDeleteErrorEvent, WorktreeDeletedEvent, WorktreeDeletingEvent,
-    WorktreePathExistsEvent, WorktreePermanentlyDeletedEvent, WorktreeSetupCompleteEvent,
-    WorktreeUnarchivedEvent,
+    FileSearchResult, FileTreeNode, FileTreeResponse, JeanConfig, MergeType, Project, SessionType,
+    Worktree, WorktreeArchivedEvent, WorktreeBranchExistsEvent, WorktreeCreateErrorEvent,
+    WorktreeCreatedEvent, WorktreeCreatingEvent, WorktreeDeleteErrorEvent, WorktreeDeletedEvent,
+    WorktreeDeletingEvent, WorktreePathExistsEvent, WorktreePermanentlyDeletedEvent,
+    WorktreeSetupCompleteEvent, WorktreeUnarchivedEvent,
 };
 use crate::claude_cli::resolve_cli_binary;
 use crate::codex_cli::resolve_cli_binary as resolve_codex_cli_binary;
@@ -9832,6 +9832,67 @@ pub async fn revert_last_local_commit(
     Ok(RevertCommitResponse {
         commit_hash,
         commit_message,
+    })
+}
+
+#[tauri::command]
+pub async fn list_worktree_file_tree(
+    app: AppHandle,
+    worktree_id: String,
+    relative_path: Option<String>,
+) -> Result<FileTreeResponse, String> {
+    let root = resolve_worktree_root(&app, &worktree_id)?;
+    let subtree = relative_path
+        .as_deref()
+        .map(normalize_relative_worktree_path)
+        .transpose()?
+        .map(|path| root.join(path))
+        .unwrap_or_else(|| root.clone());
+
+    if !subtree.exists() {
+        return Err(format!("Path does not exist: {}", subtree.display()));
+    }
+
+    let mut nodes = Vec::new();
+    let walker = ignore::WalkBuilder::new(&subtree)
+        .hidden(false)
+        .git_ignore(true)
+        .sort_by_file_name(|a, b| a.cmp(b))
+        .build();
+
+    for result in walker {
+        let entry = result.map_err(|e| format!("Walk error: {e}"))?;
+        let path = entry.path();
+
+        if path == subtree {
+            continue;
+        }
+
+        let rel = path.strip_prefix(&root).map_err(|e| e.to_string())?;
+        let name = path
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_string();
+        let depth = rel.components().count() as u32;
+        let is_dir = path.is_dir();
+        let extension = path
+            .extension()
+            .map(|e| e.to_string_lossy().to_string());
+
+        nodes.push(FileTreeNode {
+            relative_path: rel.to_string_lossy().to_string(),
+            name,
+            node_type: if is_dir { "directory" } else { "file" }.to_string(),
+            depth,
+            has_children: if is_dir { Some(true) } else { None },
+            extension,
+        });
+    }
+
+    Ok(FileTreeResponse {
+        root: root.to_string_lossy().to_string(),
+        nodes,
     })
 }
 

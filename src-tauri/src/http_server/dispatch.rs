@@ -405,6 +405,14 @@ pub async fn dispatch_command(
             let result = crate::projects::list_worktree_files(worktree_path, max_files).await?;
             to_value(result)
         }
+        "list_worktree_file_tree" => {
+            let worktree_id: String = field(&args, "worktreeId", "worktree_id")?;
+            let relative_path: Option<String> = field_opt(&args, "relativePath", "relative_path")?;
+            let result =
+                crate::projects::list_worktree_file_tree(app.clone(), worktree_id, relative_path)
+                    .await?;
+            to_value(result)
+        }
 
         // =====================================================================
         // GitHub Issues & PRs
