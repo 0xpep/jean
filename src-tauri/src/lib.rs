@@ -3048,6 +3048,8 @@ pub fn run() {
             projects::list_worktree_files,
             projects::list_worktree_file_tree,
             projects::search_worktree_files,
+            projects::read_worktree_markdown,
+            projects::write_worktree_markdown,
             projects::get_project_branches,
             projects::update_project_settings,
             projects::get_jean_config,

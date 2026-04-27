@@ -420,6 +420,22 @@ pub async fn dispatch_command(
                 crate::projects::search_worktree_files(app.clone(), worktree_id, query).await?;
             to_value(result)
         }
+        "read_worktree_markdown" => {
+            let worktree_id: String = field(&args, "worktreeId", "worktree_id")?;
+            let relative_path: String = field(&args, "relativePath", "relative_path")?;
+            let result =
+                crate::projects::read_worktree_markdown(app.clone(), worktree_id, relative_path)
+                    .await?;
+            to_value(result)
+        }
+        "write_worktree_markdown" => {
+            let worktree_id: String = field(&args, "worktreeId", "worktree_id")?;
+            let relative_path: String = field(&args, "relativePath", "relative_path")?;
+            let content: String = from_field(&args, "content")?;
+            crate::projects::write_worktree_markdown(app.clone(), worktree_id, relative_path, content)
+                .await?;
+            Ok(Value::Null)
+        }
 
         // =====================================================================
         // GitHub Issues & PRs

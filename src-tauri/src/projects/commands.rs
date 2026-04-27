@@ -9954,6 +9954,46 @@ pub async fn search_worktree_files(
     Ok(results)
 }
 
+#[tauri::command]
+pub async fn read_worktree_markdown(
+    app: AppHandle,
+    worktree_id: String,
+    relative_path: String,
+) -> Result<String, String> {
+    let root = resolve_worktree_root(&app, &worktree_id)?;
+    let rel = normalize_relative_worktree_path(&relative_path)?;
+    let full_path = root.join(&rel);
+
+    if !is_markdown_path(&full_path) {
+        return Err("Only markdown files can be read/written via this command".to_string());
+    }
+
+    std::fs::read_to_string(full_path).map_err(|e| format!("Failed to read file: {e}"))
+}
+
+#[tauri::command]
+pub async fn write_worktree_markdown(
+    app: AppHandle,
+    worktree_id: String,
+    relative_path: String,
+    content: String,
+) -> Result<(), String> {
+    let root = resolve_worktree_root(&app, &worktree_id)?;
+    let rel = normalize_relative_worktree_path(&relative_path)?;
+    let full_path = root.join(&rel);
+
+    if !is_markdown_path(&full_path) {
+        return Err("Only markdown files can be read/written via this command".to_string());
+    }
+
+    // Ensure parent directory exists
+    if let Some(parent) = full_path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| format!("Failed to create directories: {e}"))?;
+    }
+
+    std::fs::write(full_path, content).map_err(|e| format!("Failed to write file: {e}"))
+}
+
 fn is_markdown_path(path: &Path) -> bool {
     matches!(
         path.extension().and_then(|ext| ext.to_str()),
