@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { invoke } from '@tauri-apps/api/core'
-import { FileSearchResult, FileTreeResponse } from '@/types/file-explorer'
+import type { FileSearchResult, FileTreeResponse } from '@/types/file-explorer'
 
 export function useFileTree(worktreeId: string | undefined, relativePath?: string) {
   return useQuery({
@@ -46,7 +46,10 @@ export function useWriteMarkdown() {
       worktreeId: string
       relativePath: string
       content: string
-    }) => invoke<void>('write_worktree_markdown', args),
+    }) => {
+      void args
+      return invoke('write_worktree_markdown', args)
+    },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
         queryKey: ['read-markdown', variables.worktreeId, variables.relativePath],

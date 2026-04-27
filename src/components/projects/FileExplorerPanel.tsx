@@ -97,7 +97,7 @@ export function FileExplorerPanel({ worktreeId, className }: FileExplorerPanelPr
               ))
             ) : (
               <div className="p-8 text-center text-muted-foreground italic">
-                No files found matching "{searchQuery}"
+                No files found matching &ldquo;{searchQuery}&rdquo;
               </div>
             )}
           </div>
