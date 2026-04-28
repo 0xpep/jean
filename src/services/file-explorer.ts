@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { invoke } from '@tauri-apps/api/core'
+import { invoke } from '@/lib/transport'
 import type { FileSearchResult, FileTreeResponse } from '@/types/file-explorer'
 
 export function useFileTree(worktreeId: string | undefined, relativePath?: string, respectGitignore = true) {
