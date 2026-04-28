@@ -9840,6 +9840,7 @@ pub async fn list_worktree_file_tree(
     app: AppHandle,
     worktree_id: String,
     relative_path: Option<String>,
+    respect_gitignore: Option<bool>,
 ) -> Result<FileTreeResponse, String> {
     let root = resolve_worktree_root(&app, &worktree_id)?;
     let subtree = relative_path
