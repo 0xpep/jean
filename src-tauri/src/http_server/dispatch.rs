@@ -408,8 +408,9 @@ pub async fn dispatch_command(
         "list_worktree_file_tree" => {
             let worktree_id: String = field(&args, "worktreeId", "worktree_id")?;
             let relative_path: Option<String> = field_opt(&args, "relativePath", "relative_path")?;
+            let respect_gitignore: Option<bool> = field_opt(&args, "respectGitignore", "respect_gitignore")?;
             let result =
-                crate::projects::list_worktree_file_tree(app.clone(), worktree_id, relative_path)
+                crate::projects::list_worktree_file_tree(app.clone(), worktree_id, relative_path, respect_gitignore)
                     .await?;
             to_value(result)
         }
