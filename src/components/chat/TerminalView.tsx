@@ -10,7 +10,9 @@ import {
 import { Kbd } from '@/components/ui/kbd'
 import { formatShortcutDisplay } from '@/types/keybindings'
 import { cn } from '@/lib/utils'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { MODAL_TERMINAL_SECONDARY_ROW_CLASS } from './modal-terminal-layout'
+import { TerminalHotkeyBar } from './TerminalHotkeyBar'
 import '@xterm/xterm/css/xterm.css'
 
 const EMPTY_TERMINALS: TerminalInstance[] = []
@@ -105,6 +107,7 @@ export function TerminalView({
   onExpand,
   hideControls = false,
 }: TerminalViewProps) {
+  const isMobile = useIsMobile()
   const terminals = useTerminalStore(
     state => state.terminals[worktreeId] ?? EMPTY_TERMINALS
   )
@@ -333,6 +336,9 @@ export function TerminalView({
           />
         ))}
       </div>
+      {isMobile && activeTerminalId && (
+        <TerminalHotkeyBar terminalId={activeTerminalId} />
+      )}
     </div>
   )
 }
