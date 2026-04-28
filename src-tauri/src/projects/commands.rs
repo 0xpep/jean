@@ -9855,9 +9855,12 @@ pub async fn list_worktree_file_tree(
     }
 
     let mut nodes = Vec::new();
+    let respect_gitignore = respect_gitignore.unwrap_or(true);
     let walker = ignore::WalkBuilder::new(&subtree)
         .hidden(false)
-        .git_ignore(true)
+        .git_ignore(respect_gitignore)
+        .git_global(respect_gitignore)
+        .git_exclude(respect_gitignore)
         .sort_by_file_name(|a, b| a.cmp(b))
         .build();
 
