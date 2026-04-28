@@ -80,6 +80,18 @@ export function DockBurgerButton({
   const sessionChatModalWorktreeId = useUIStore(
     state => state.sessionChatModalWorktreeId
   )
+  // Debug: Check all sources for worktree ID
+  const debugWorktreeIdSources = {
+    sessionChatModalOpen,
+    sessionChatModalWorktreeId,
+    activeWorktreeId,
+    selectedWorktreeId,
+    currentWorktreeIdResolved: sessionChatModalOpen
+      ? (sessionChatModalWorktreeId ?? activeWorktreeId ?? selectedWorktreeId)
+      : (activeWorktreeId ?? selectedWorktreeId),
+  }
+  console.log('[DockBurgerButton] Worktree ID sources:', debugWorktreeIdSources)
+
   const currentWorktreeId = sessionChatModalOpen
     ? (sessionChatModalWorktreeId ?? activeWorktreeId ?? selectedWorktreeId)
     : (activeWorktreeId ?? selectedWorktreeId)
@@ -406,11 +418,15 @@ export function DockBurgerButton({
           <DialogHeader className="p-4 border-b">
             <DialogTitle>File Explorer</DialogTitle>
           </DialogHeader>
-          {currentWorktreeId && (
+          {currentWorktreeId ? (
             <FileExplorerPanel
               worktreeId={currentWorktreeId}
               className="flex-1 border-0 rounded-tl-none rounded-tr-none"
             />
+          ) : (
+            <div className="flex-1 flex items-center justify-center text-muted-foreground">
+              No worktree selected
+            </div>
           )}
         </DialogContent>
       </Dialog>
