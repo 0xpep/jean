@@ -1,0 +1,25 @@
+services:
+  jean:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: jean-headless
+    # Copy Jean binary from host (macOS M1) to Linux container
+    # Note: Jean binary must be Linux ARM64 build
+    ports:
+      - "3456:3456"
+    environment:
+      - JEAN_HOST=0.0.0.0
+      - JEAN_PORT=3456
+    volumes:
+      # Mount config directory for persistence
+      - ./config:/home/jean/.config/jean:rw
+      # Mount opencode/codex config with openrouter settings
+      - ./opencode-config:/home/jean/.config/opencode:ro
+      # Mount projects directory
+      - ${HOME}/jean:/home/jean/jean:rw
+    # Restart policy
+    restart: unless-stopped
+    # Run as non-root user
+    user: jean
+    command: ["jean", "headless", "--host", "0.0.0.0", "--port", "3456"]
