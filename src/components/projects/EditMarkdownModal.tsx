@@ -56,20 +56,6 @@ export function EditMarkdownModal({
     }
   }
 
-  const handleSave = async () => {
-    try {
-      await writeMarkdown.mutateAsync({
-        worktreeId,
-        relativePath,
-        content: editContent,
-      })
-      toast.success('File saved successfully')
-      onClose()
-    } catch (error) {
-      toast.error(`Failed to save file: ${error}`)
-    }
-  }
-
   const getLanguage = (path: string) => {
     const ext = path.split('.').pop()?.toLowerCase()
     const langMap: Record<string, string> = {

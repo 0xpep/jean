@@ -79,9 +79,7 @@ import { SecurityAlertsBadge } from '@/components/shared/SecurityAlertsBadge'
 import { PlanDialog } from '@/components/chat/PlanDialog'
 import { RecapDialog } from '@/components/chat/RecapDialog'
 import { SessionChatModal } from '@/components/chat/SessionChatModal'
-import { FileExplorerPanel } from '@/components/projects/FileExplorerPanel'
 import {
-  ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from '@/components/ui/resizable'
@@ -2321,16 +2319,6 @@ export function ProjectCanvasView({ projectId }: ProjectCanvasViewProps) {
               </div>
             </ResizablePanel>
 
-            {selectedFlatCard && !selectedFlatCard.isPending && !isMobile && (
-              <>
-                <ResizableHandle withHandle />
-                <ResizablePanel defaultSize={30} minSize={20}>
-                  <div className="h-full p-4 pl-0">
-                    <FileExplorerPanel worktreeId={selectedFlatCard.worktreeId} />
-                  </div>
-                </ResizablePanel>
-              </>
-            )}
           </ResizablePanelGroup>
         </div>
       </div>
