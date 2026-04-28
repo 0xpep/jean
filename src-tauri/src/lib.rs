@@ -227,14 +227,21 @@ pub struct AppPreferences {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub linear_api_key: Option<String>, // Global Linear personal API key (inherited by all projects)
     #[serde(default = "default_cli_source")]
-    pub claude_cli_source: String, // Claude CLI source: "jean" (managed) or "path" (system PATH)
+    pub claude_cli_source: String, // Claude CLI source: "jean", "path", or "custom"
     #[serde(default = "default_cli_source")]
-    pub codex_cli_source: String, // Codex CLI source: "jean" (managed) or "path" (system PATH)
+    pub codex_cli_source: String, // Codex CLI source: "jean", "path", or "custom"
     #[serde(default = "default_cli_source")]
-    pub opencode_cli_source: String, // OpenCode CLI source: "jean" (managed) or "path" (system PATH)
+    pub opencode_cli_source: String, // OpenCode CLI source: "jean", "path", or "custom"
     #[serde(default = "default_cli_source")]
-    pub gh_cli_source: String, // GitHub CLI source: "jean" (managed) or "path" (system PATH)
+    pub gh_cli_source: String, // GitHub CLI source: "jean", "path", or "custom"
     #[serde(default)]
+    pub claude_cli_custom_path: String, // Custom Claude CLI binary path
+    #[serde(default)]
+    pub codex_cli_custom_path: String, // Custom Codex CLI binary path
+    #[serde(default)]
+    pub opencode_cli_custom_path: String, // Custom OpenCode CLI binary path
+    #[serde(default)]
+    pub gh_cli_custom_path: String, // Custom GitHub CLI binary path
     pub expand_tool_calls_by_default: bool, // Expand all tool call collapsibles by default (default: false)
 #[serde(default)]
 pub bypass_claude_auth: bool, // Skip Claude CLI login check (for custom CLI binaries like claude.ccr)
@@ -1472,6 +1479,10 @@ impl Default for AppPreferences {
             codex_cli_source: default_cli_source(),
             opencode_cli_source: default_cli_source(),
             gh_cli_source: default_cli_source(),
+            claude_cli_custom_path: String::default(),
+            codex_cli_custom_path: String::default(),
+            opencode_cli_custom_path: String::default(),
+            gh_cli_custom_path: String::default(),
             expand_tool_calls_by_default: false,
             bypass_claude_auth: false,
         }

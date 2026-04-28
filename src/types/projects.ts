@@ -63,14 +63,14 @@ export interface Project {
 export interface DirEntry {
   name: string
   path: string
-  is_dir: boolean
-  is_git_repo: boolean
-  is_hidden: boolean
+  isDir: boolean
+  isGitRepo: boolean
+  isHidden: boolean
 }
 
 export interface BrowseDirectoryResult {
-  current_path: string
-  parent_path?: string
+  currentPath: string
+  parentPath?: string
   entries: DirEntry[]
 }
 
