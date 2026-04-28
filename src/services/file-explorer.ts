@@ -2,13 +2,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { invoke } from '@tauri-apps/api/core'
 import type { FileSearchResult, FileTreeResponse } from '@/types/file-explorer'
 
-export function useFileTree(worktreeId: string | undefined, relativePath?: string) {
+export function useFileTree(worktreeId: string | undefined, relativePath?: string, respectGitignore = true) {
   return useQuery({
-    queryKey: ['file-tree', worktreeId, relativePath],
+    queryKey: ['file-tree', worktreeId, relativePath, respectGitignore],
     queryFn: () =>
       invoke<FileTreeResponse>('list_worktree_file_tree', {
         worktreeId,
         relativePath,
+        respectGitignore,
       }),
     enabled: !!worktreeId,
   })
@@ -55,22 +56,6 @@ export function useWriteMarkdown() {
         queryKey: ['read-markdown', variables.worktreeId, variables.relativePath],
       })
     },
-  })
-}
-import { useQuery } from '@tanstack/react-query'
-import { invoke } from '@tauri-apps/api/core'
-import type { FileTreeResponse, FileSearchResult } from '@/types/file-explorer'
-
-export function useFileTree(worktreeId: string | undefined, relativePath?: string, respectGitignore = true) {
-  return useQuery({
-    queryKey: ['file-tree', worktreeId, relativePath, respectGitignore],
-    queryFn: () =>
-      invoke<FileTreeResponse>('list_worktree_file_tree', {
-        worktreeId,
-        relativePath,
-        respectGitignore,
-      }),
-    enabled: !!worktreeId,
   })
 }
 
