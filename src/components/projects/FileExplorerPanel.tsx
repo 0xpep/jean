@@ -18,8 +18,8 @@ export function FileExplorerPanel({ worktreeId, className }: FileExplorerPanelPr
   const [isSearching, setIsSearching] = useState(false)
   const [editingFile, setEditingFile] = useState<string | null>(null)
 
-  const { data: treeData, isLoading: isTreeLoading } = useFileTree(worktreeId)
-  const { data: searchResults, isLoading: isSearchLoading } = useFileSearch(
+  const { data: treeData, isLoading: isTreeLoading, error: treeError } = useFileTree(worktreeId)
+  const { data: searchResults, isLoading: isSearchLoading, error: searchError } = useFileSearch(
     worktreeId,
     searchQuery
   )
@@ -81,18 +81,18 @@ export function FileExplorerPanel({ worktreeId, className }: FileExplorerPanelPr
           <div className="flex items-center justify-center p-8">
             <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
           </div>
-        ) : isTreeError ? (
+        ) : treeError ? (
           <div className="p-8 text-red-500">
-            Error loading file tree: {isTreeError.message}
+            Error loading file tree: {treeError.message}
           </div>
         ) : isSearching ? (
           isSearchLoading ? (
             <div className="flex items-center justify-center p-8">
               <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
             </div>
-          ) : isSearchError ? (
+          ) : searchError ? (
             <div className="p-8 text-red-500">
-              Error searching files: {isSearchError.message}
+              Error searching files: {searchError.message}
             </div>
           ) : searchQuery.length >= 2 ? (
             <div className="flex flex-col py-2 font-mono text-xs">
