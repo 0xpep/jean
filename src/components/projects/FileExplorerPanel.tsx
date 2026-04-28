@@ -77,34 +77,53 @@ export function FileExplorerPanel({ worktreeId, className }: FileExplorerPanelPr
       </div>
 
       <ScrollArea className="flex-1">
-        {isTreeLoading || (isSearching && isSearchLoading) ? (
+        {isTreeLoading ? (
           <div className="flex items-center justify-center p-8">
             <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
           </div>
-        ) : isSearching && searchQuery.length >= 2 ? (
-          <div className="flex flex-col py-2 font-mono text-xs">
-            {searchResults?.length ? (
-              searchResults.map(result => (
-                <div
-                  key={result.relative_path}
-                  className="flex items-center py-1.5 px-3 hover:bg-accent cursor-pointer group"
-                  onClick={() => handleFileClick(result.relative_path)}
-                >
-                  <ListFilter className="w-3.5 h-3.5 mr-2 text-muted-foreground" />
-                  <div className="flex flex-col truncate">
-                    <span className="truncate">{result.name}</span>
-                    <span className="text-[10px] text-muted-foreground truncate opacity-70">
-                      {result.relative_path}
-                    </span>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="p-8 text-center text-muted-foreground italic">
-                No files found matching &ldquo;{searchQuery}&rdquo;
-              </div>
-            )}
+        ) : isTreeError ? (
+          <div className="p-8 text-red-500">
+            Error loading file tree: {isTreeError.message}
           </div>
+        ) : isSearching ? (
+          isSearchLoading ? (
+            <div className="flex items-center justify-center p-8">
+              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : isSearchError ? (
+            <div className="p-8 text-red-500">
+              Error searching files: {isSearchError.message}
+            </div>
+          ) : searchQuery.length >= 2 ? (
+            <div className="flex flex-col py-2 font-mono text-xs">
+              {searchResults?.length ? (
+                searchResults.map(result => (
+                  <div
+                    key={result.relative_path}
+                    className="flex items-center py-1.5 px-3 hover:bg-accent cursor-pointer group"
+                    onClick={() => handleFileClick(result.relative_path)}
+                  >
+                    <ListFilter className="w-3.5 h-3.5 mr-2 text-muted-foreground" />
+                    <div className="flex flex-col truncate">
+                      <span className="truncate">{result.name}</span>
+                      <span className="text-[10px] text-muted-foreground truncate opacity-70">
+                        {result.relative_path}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="p-8 text-center text-muted-foreground italic">
+                  No files found matching &ldquo;{searchQuery}&rdquo;
+                </div>
+              )}
+            </div>
+          ) : (
+            <FileExplorerTree
+              nodes={treeData?.nodes || []}
+              onFileClick={handleFileClick}
+            />
+          )
         ) : (
           <FileExplorerTree
             nodes={treeData?.nodes || []}
