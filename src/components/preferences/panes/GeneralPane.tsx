@@ -182,6 +182,7 @@ export const GeneralPane: React.FC = () => {
   // CLI status hooks
   const { data: cliStatus, isLoading: isCliLoading } = useClaudeCliStatus()
   const isPathSource = preferences?.claude_cli_source === 'path'
+  const isCustomSource = preferences?.claude_cli_source === 'custom'
   const { data: claudeVersions, isLoading: isClaudeVersionsLoading } =
     useAvailableCliVersions({ enabled: isPathSource && !!cliStatus?.installed })
   const claudeLatestStable = claudeVersions?.find(v => !v.prerelease)
@@ -193,6 +194,7 @@ export const GeneralPane: React.FC = () => {
   const { data: cursorStatus, isLoading: isCursorLoading } =
     useCursorCliStatus()
   const isGhPathSource = preferences?.gh_cli_source === 'path'
+  const isGhCustomSource = preferences?.gh_cli_source === 'custom'
   const { data: ghVersions, isLoading: isGhVersionsLoading } =
     useAvailableGhVersions({ enabled: isGhPathSource && !!ghStatus?.installed })
   const ghLatestStable = ghVersions?.find(v => !v.prerelease)
@@ -202,6 +204,7 @@ export const GeneralPane: React.FC = () => {
     isNewerVersion(ghLatestStable.version, ghStatus.version)
   const { data: codexStatus, isLoading: isCodexLoading } = useCodexCliStatus()
   const isCodexPathSource = preferences?.codex_cli_source === 'path'
+  const isCodexCustomSource = preferences?.codex_cli_source === 'custom'
   const { data: codexVersions, isLoading: isCodexVersionsLoading } =
     useAvailableCodexVersions({
       enabled: isCodexPathSource && !!codexStatus?.installed,
@@ -214,6 +217,7 @@ export const GeneralPane: React.FC = () => {
   const { data: opencodeStatus, isLoading: isOpenCodeLoading } =
     useOpenCodeCliStatus()
   const isOpencodePathSource = preferences?.opencode_cli_source === 'path'
+  const isOpencodeCustomSource = preferences?.opencode_cli_source === 'custom'
   const { data: opencodeVersions, isLoading: isOpencodeVersionsLoading } =
     useAvailableOpencodeVersions({
       enabled: isOpencodePathSource && !!opencodeStatus?.installed,
@@ -442,7 +446,7 @@ export const GeneralPane: React.FC = () => {
     }
   }
 
-  const handleClaudeSourceChange = (value: 'jean' | 'path') => {
+  const handleClaudeSourceChange = (value: 'jean' | 'path' | 'custom') => {
     if (preferences) {
       patchPreferences.mutate(
         { claude_cli_source: value },
@@ -455,7 +459,7 @@ export const GeneralPane: React.FC = () => {
     }
   }
 
-  const handleCodexSourceChange = (value: 'jean' | 'path') => {
+  const handleCodexSourceChange = (value: 'jean' | 'path' | 'custom') => {
     if (preferences) {
       patchPreferences.mutate(
         { codex_cli_source: value },
@@ -468,7 +472,7 @@ export const GeneralPane: React.FC = () => {
     }
   }
 
-  const handleOpencodeSourceChange = (value: 'jean' | 'path') => {
+  const handleOpencodeSourceChange = (value: 'jean' | 'path' | 'custom') => {
     if (preferences) {
       patchPreferences.mutate(
         { opencode_cli_source: value },
@@ -483,7 +487,7 @@ export const GeneralPane: React.FC = () => {
     }
   }
 
-  const handleGhSourceChange = (value: 'jean' | 'path') => {
+  const handleGhSourceChange = (value: 'jean' | 'path' | 'custom') => {
     if (preferences) {
       patchPreferences.mutate(
         { gh_cli_source: value },
@@ -973,18 +977,22 @@ export const GeneralPane: React.FC = () => {
                         onClick={() =>
                           handleCopyPath(
                             preferences?.claude_cli_source === 'path'
-                              ? pathDetection?.path
-                              : cliStatus?.path
+                                     ? pathDetection?.path
+                                         ?? preferences?.claude_cli_custom_path
+                                         ?? cliStatus?.path
+                                   : cliStatus?.path
                           )
                         }
                         className="text-left hover:underline cursor-pointer"
                       >
                         {preferences?.claude_cli_source === 'path'
-                          ? (pathDetection?.path ?? 'System PATH')
-                          : (cliStatus?.path ?? 'Not installed')}
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent>Click to copy path</TooltipContent>
+                                 ? (pathDetection?.path ?? 'System PATH')
+                                 : preferences?.claude_cli_source === 'custom'
+                                     ? (preferences?.claude_cli_custom_path ?? 'Not set')
+                                     : (cliStatus?.path ?? 'Not installed')}
+                       </button>
+                   </TooltipTrigger>
+                   <TooltipContent>Click to copy path</TooltipContent>
                   </Tooltip>
                 }
               >
@@ -1001,8 +1009,26 @@ export const GeneralPane: React.FC = () => {
                       System PATH
                       {!pathDetection?.found && ' (not found)'}
                     </SelectItem>
+                      <SelectItem value="custom">Custom</SelectItem>
                   </SelectContent>
                 </Select>
+{isCustomSource && (
+                    <InlineField
+                    label="Custom CLI path"
+                    description="Path to the Claude CLI binary"
+                    >
+                     <Input
+                    value={preferences?.claude_cli_custom_path ?? ''}
+                    onChange={e =>
+                     patchPreferences.mutate({
+                      claude_cli_custom_path: e.target.value,
+                      })
+                    }
+                    placeholder="/path/to/claude"
+                    type="text"
+                    />
+                  </InlineField>
+                )}
               </InlineField>
             )}
           </div>
@@ -1117,8 +1143,10 @@ export const GeneralPane: React.FC = () => {
                         onClick={() =>
                           handleCopyPath(
                             preferences?.gh_cli_source === 'path'
-                              ? ghPathDetection?.path
-                              : ghStatus?.path
+                              ? (ghPathDetection?.path ?? 'System PATH')
+                              : preferences?.gh_cli_source === 'custom'
+                                ? (preferences?.gh_cli_custom_path ?? 'Not set')
+                                : (ghStatus?.path ?? 'Not installed')
                           )
                         }
                         className="text-left hover:underline cursor-pointer"
@@ -1144,14 +1172,32 @@ export const GeneralPane: React.FC = () => {
                     <SelectItem value="path" disabled={!ghPathDetection?.found}>
                       System PATH
                       {!ghPathDetection?.found && ' (not found)'}
-                    </SelectItem>
+
+                     </SelectItem>
+                       <SelectItem value="custom">Custom</SelectItem>
                   </SelectContent>
                 </Select>
               </InlineField>
-            )}
-          </div>
-        </SettingsSection>
-      )}
+              {isGhCustomSource && (
+                <InlineField
+                  label="Custom CLI path"
+                  description="Path to the GitHub CLI binary"
+                >
+                  <Input
+                    value={preferences?.gh_cli_custom_path ?? ''}
+                    onChange={e =>
+                      patchPreferences.mutate({
+                        gh_cli_custom_path: e.target.value,
+                      })
+                    }
+                    placeholder="/path/to/gh"
+                    type="text"
+                  />
+                </InlineField>
+              )}
+            </div>
+          </SettingsSection>
+        )}
 
       {isNativeApp() && (
         <SettingsSection
@@ -1274,8 +1320,11 @@ export const GeneralPane: React.FC = () => {
                         onClick={() =>
                           handleCopyPath(
                             preferences?.codex_cli_source === 'path'
-                              ? codexPathDetection?.path
-                              : codexStatus?.path
+                              ? (codexPathDetection?.path ?? 'System PATH')
+                              : preferences?.codex_cli_source === 'custom'
+                                ? (preferences?.codex_cli_custom_path ??
+                                  'Not set')
+                                : (codexStatus?.path ?? 'Not installed')
                           )
                         }
                         className="text-left hover:underline cursor-pointer"
@@ -1305,8 +1354,26 @@ export const GeneralPane: React.FC = () => {
                       System PATH
                       {!codexPathDetection?.found && ' (not found)'}
                     </SelectItem>
+                    <SelectItem value="custom">Custom</SelectItem>
                   </SelectContent>
                 </Select>
+              </InlineField>
+            )}
+            {isCodexCustomSource && (
+              <InlineField
+                label="Custom CLI path"
+                description="Path to the Codex CLI binary"
+              >
+                <Input
+                  value={preferences?.codex_cli_custom_path ?? ''}
+                  onChange={e =>
+                    patchPreferences.mutate({
+                      codex_cli_custom_path: e.target.value,
+                    })
+                  }
+                  placeholder="/path/to/codex"
+                  type="text"
+                />
               </InlineField>
             )}
           </div>
@@ -1436,8 +1503,11 @@ export const GeneralPane: React.FC = () => {
                         onClick={() =>
                           handleCopyPath(
                             preferences?.opencode_cli_source === 'path'
-                              ? opencodePathDetection?.path
-                              : opencodeStatus?.path
+                              ? (opencodePathDetection?.path ?? 'System PATH')
+                              : preferences?.opencode_cli_source === 'custom'
+                                ? (preferences?.opencode_cli_custom_path ??
+                                  'Not set')
+                                : (opencodeStatus?.path ?? 'Not installed')
                           )
                         }
                         className="text-left hover:underline cursor-pointer"
@@ -1467,8 +1537,26 @@ export const GeneralPane: React.FC = () => {
                       System PATH
                       {!opencodePathDetection?.found && ' (not found)'}
                     </SelectItem>
+                    <SelectItem value="custom">Custom</SelectItem>
                   </SelectContent>
                 </Select>
+              </InlineField>
+            )}
+            {isOpencodeCustomSource && (
+              <InlineField
+                label="Custom CLI path"
+                description="Path to the OpenCode CLI binary"
+              >
+                <Input
+                  value={preferences?.opencode_cli_custom_path ?? ''}
+                  onChange={e =>
+                    patchPreferences.mutate({
+                      opencode_cli_custom_path: e.target.value,
+                    })
+                  }
+                  placeholder="/path/to/opencode"
+                  type="text"
+                />
               </InlineField>
             )}
           </div>

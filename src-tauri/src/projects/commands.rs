@@ -185,6 +185,7 @@ pub struct GitIdentity {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct DirEntry {
     pub name: String,
     pub path: String,
@@ -194,6 +195,7 @@ pub struct DirEntry {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct BrowseDirectoryResult {
     pub current_path: String,
     pub parent_path: Option<String>,
@@ -202,21 +204,33 @@ pub struct BrowseDirectoryResult {
 
 #[tauri::command]
 pub async fn browse_directory(path: Option<String>) -> Result<BrowseDirectoryResult, String> {
+    log::info!("Browsing directory: {path:?}");
     let requested_path = path
+        .filter(|p| !p.trim().is_empty())
         .map(PathBuf::from)
         .or_else(dirs::home_dir)
         .ok_or_else(|| "No home directory found".to_string())?;
 
+    log::info!("Requested path: {}", requested_path.display());
+
     let current_path = requested_path
         .canonicalize()
-        .map_err(|e| format!("Failed to access directory: {e}"))?;
+        .map_err(|e| {
+            let err = format!("Failed to access directory {}: {e}", requested_path.display());
+            log::error!("{err}");
+            err
+        })?;
 
     if !current_path.is_dir() {
-        return Err(format!(
+        let err = format!(
             "Path is not a directory: {}",
             current_path.display()
-        ));
+        );
+        log::error!("{err}");
+        return Err(err);
     }
+
+    log::info!("Canonical path: {}", current_path.display());
 
     let parent_path = current_path
         .parent()
@@ -224,28 +238,40 @@ pub async fn browse_directory(path: Option<String>) -> Result<BrowseDirectoryRes
     let mut entries = Vec::new();
 
     let read_dir = std::fs::read_dir(&current_path)
-        .map_err(|e| format!("Failed to read directory {}: {e}", current_path.display()))?;
+        .map_err(|e| {
+            let err = format!("Failed to read directory {}: {e}", current_path.display());
+            log::error!("{err}");
+            err
+        })?;
 
     for entry_result in read_dir {
         if entries.len() >= 500 {
+            log::warn!("Reached maximum entry limit (500) for {}", current_path.display());
             break;
         }
 
         let entry = match entry_result {
             Ok(entry) => entry,
-            Err(error) if error.kind() == std::io::ErrorKind::PermissionDenied => continue,
-            Err(error) => return Err(format!("Failed to read directory entry: {error}")),
+            Err(error) if error.kind() == std::io::ErrorKind::PermissionDenied => {
+                log::warn!("Permission denied for entry in {}", current_path.display());
+                continue;
+            }
+            Err(error) => {
+                log::error!("Failed to read directory entry in {}: {error}", current_path.display());
+                return Err(format!("Failed to read directory entry: {error}"));
+            }
         };
 
         let path = entry.path();
         let metadata = match entry.metadata() {
             Ok(metadata) => metadata,
-            Err(error) if error.kind() == std::io::ErrorKind::PermissionDenied => continue,
+            Err(error) if error.kind() == std::io::ErrorKind::PermissionDenied => {
+                log::warn!("Permission denied for metadata of {}", path.display());
+                continue;
+            }
             Err(error) => {
-                return Err(format!(
-                    "Failed to read metadata for {}: {error}",
-                    path.display()
-                ))
+                log::warn!("Failed to read metadata for {}: {error}", path.display());
+                continue; // Skip entries we can't read metadata for
             }
         };
 
@@ -264,6 +290,8 @@ pub async fn browse_directory(path: Option<String>) -> Result<BrowseDirectoryRes
             is_hidden,
         });
     }
+
+    log::info!("Found {} directories in {}", entries.len(), current_path.display());
 
     entries.sort_by(|a, b| match (a.is_hidden, b.is_hidden) {
         (false, true) => std::cmp::Ordering::Less,

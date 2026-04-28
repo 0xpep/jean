@@ -13,6 +13,7 @@
 ### Task 1: Update AppPreferences in Rust
 
 **Files:**
+
 - Modify: `src-tauri/src/lib.rs`
 
 - [ ] **Step 1: Add bypass_claude_auth to AppPreferences struct**
@@ -34,16 +35,18 @@ fn default_false() -> bool {
     false
 }
 ```
+
 And use `#[serde(default = "default_false")]` if `#[serde(default)]` is not enough (though for bool it defaults to false).
 
 - [ ] **Step 3: Update update_preferences command if needed**
-Check if `update_preferences` needs changes to handle the new field.
+      Check if `update_preferences` needs changes to handle the new field.
 
 ---
 
 ### Task 2: Update AppPreferences in TypeScript
 
 **Files:**
+
 - Modify: `src/types/preferences.ts`
 
 - [ ] **Step 1: Add bypass_claude_auth to AppPreferences interface**
@@ -70,6 +73,7 @@ export const defaultPreferences: AppPreferences = {
 ### Task 3: Update check_claude_cli_auth in Rust
 
 **Files:**
+
 - Modify: `src-tauri/src/claude_cli/commands.rs`
 
 - [ ] **Step 1: Update check_claude_cli_auth to respect the bypass flag**
@@ -111,6 +115,7 @@ pub async fn check_claude_cli_auth(app: AppHandle) -> Result<ClaudeAuthStatus, S
 ### Task 4: Add UI Toggle to General Settings
 
 **Files:**
+
 - Modify: `src/components/preferences/panes/GeneralPane.tsx`
 
 - [ ] **Step 1: Add the toggle to the Claude CLI settings section**

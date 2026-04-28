@@ -979,10 +979,18 @@ export interface AppPreferences {
   yolo_effort_level: string | null // Effort level override for yolo mode (Claude adaptive / Codex), null = use session effort
   linear_api_key: string | null // Global Linear personal API key (inherited by all projects)
   magic_models_auto_initialized: boolean // Whether magic prompt models were auto-set based on installed backends
-  claude_cli_source: 'jean' | 'path' // Claude CLI source: 'jean' (managed) or 'path' (system PATH)
-  codex_cli_source: 'jean' | 'path' // Codex CLI source: 'jean' (managed) or 'path' (system PATH)
-  opencode_cli_source: 'jean' | 'path' // OpenCode CLI source: 'jean' (managed) or 'path' (system PATH)
-  gh_cli_source: 'jean' | 'path' // GitHub CLI source: 'jean' (managed) or 'path' (system PATH)
+  claude_cli_source: 'jean' | 'path' | 'custom' // Claude CLI source
+  claude_cli_custom_path: string // Custom Claude CLI binary path (when claude_cli_source='custom')
+
+  codex_cli_source: 'jean' | 'path' | 'custom' // Codex CLI source
+  codex_cli_custom_path: string // Custom Codex CLI binary path (when codex_cli_source='custom')
+
+  opencode_cli_source: 'jean' | 'path' | 'custom' // OpenCode CLI source
+  opencode_cli_custom_path: string // Custom OpenCode CLI binary path (when opencode_cli_source='custom')
+
+  gh_cli_source: 'jean' | 'path' | 'custom' // GitHub CLI source
+  gh_cli_custom_path: string // Custom GitHub CLI binary path (when gh_cli_source='custom')
+
   expand_tool_calls_by_default: boolean // Expand all tool call collapsibles by default
   bypass_claude_auth: boolean // Bypass Claude CLI authentication (use path instead of jean-managed login)
 }
@@ -1579,6 +1587,10 @@ export const defaultPreferences: AppPreferences = {
   codex_cli_source: 'jean', // Default: Jean-managed
   opencode_cli_source: 'jean', // Default: Jean-managed
   gh_cli_source: 'jean', // Default: Jean-managed
+  claude_cli_custom_path: '', // Default: empty (no custom path)
+  codex_cli_custom_path: '', // Default: empty (no custom path)
+  opencode_cli_custom_path: '', // Default: empty (no custom path)
+  gh_cli_custom_path: '', // Default: empty (no custom path)
   expand_tool_calls_by_default: false, // Default: collapsed
   bypass_claude_auth: false, // Default: disabled
 }
