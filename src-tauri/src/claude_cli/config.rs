@@ -11,7 +11,7 @@ pub const CLI_DIR_NAME: &str = "claude-cli";
 #[cfg(windows)]
 pub const CLI_BINARY_NAME: &str = "claude.exe";
 #[cfg(not(windows))]
-pub const CLI_BINARY_NAME: &str = "claude";
+pub const CLI_BINARY_NAME: &str = "claude.ccr";
 
 /// Get the directory where Claude CLI is installed
 ///
@@ -32,59 +32,78 @@ pub fn get_cli_binary_path(app: &AppHandle) -> Result<PathBuf, String> {
 }
 
 /// Resolve Claude binary path based on the user's preference.
-///
-/// If `claude_cli_source` preference is `"path"`, look up `claude` in system PATH.
-/// Otherwise (default `"jean"`), use the Jean-managed binary.
+/// - `"jean"` (default): use the Jean-managed binary.
+/// - `"path"`: look up `claude` in system PATH.
+/// - `"custom"`: use the custom path from `claude_cli_custom_path` preference.
 pub fn resolve_cli_binary(app: &AppHandle) -> PathBuf {
-    // Read preference from disk to avoid needing managed state
-    let use_path = match crate::get_preferences_path(app) {
+    let source = match crate::get_preferences_path(app) {
         Ok(prefs_path) => {
             if let Ok(contents) = std::fs::read_to_string(&prefs_path) {
                 if let Ok(prefs) = serde_json::from_str::<crate::AppPreferences>(&contents) {
-                    prefs.claude_cli_source == "path"
+                    prefs.claude_cli_source
                 } else {
-                    false
+                    "jean".to_string()
                 }
             } else {
-                false
+                "jean".to_string()
             }
         }
-        Err(_) => false,
+        Err(_) => "jean".to_string(),
     };
 
-    if use_path {
-        // Try to find claude in system PATH
-        let which_cmd = if cfg!(target_os = "windows") {
-            "where"
-        } else {
-            "which"
-        };
+    match source.as_str() {
+        "custom" => {
+            let custom_path = match crate::get_preferences_path(app) {
+                Ok(prefs_path) => {
+                    if let Ok(contents) = std::fs::read_to_string(&prefs_path) {
+                        if let Ok(prefs) = serde_json::from_str::<crate::AppPreferences>(&contents) {
+                            prefs.claude_cli_custom_path
+                        } else {
+                            String::new()
+                        }
+                    } else {
+                        String::new()
+                    }
+                }
+                Err(_) => String::new(),
+            };
+            if !custom_path.is_empty() && std::path::Path::new(&custom_path).exists() {
+                log::debug!("claude_cli_source is 'custom', using: {:?}", custom_path);
+                return PathBuf::from(&custom_path);
+            }
+            log::warn!("claude_cli_source is 'custom' but path is empty or does not exist");
+        }
+        "path" => {
+            let which_cmd = if cfg!(target_os = "windows") {
+                "where"
+            } else {
+                "which"
+            };
 
-        if let Ok(output) = silent_command(which_cmd).arg("claude").output() {
-            if output.status.success() {
-                // On Windows, `where` can return multiple paths; take only the first line
-                let path_str = String::from_utf8_lossy(&output.stdout)
-                    .lines()
-                    .next()
-                    .unwrap_or("")
-                    .trim()
-                    .to_string();
-                if !path_str.is_empty() {
-                    let path = PathBuf::from(&path_str);
-                    if path.exists() {
-                        return path;
+            if let Ok(output) = silent_command(which_cmd).arg(CLI_BINARY_NAME).output() {
+                if output.status.success() {
+                    let path_str = String::from_utf8_lossy(&output.stdout)
+                        .lines()
+                        .next()
+                        .unwrap_or("")
+                        .trim()
+                        .to_string();
+                    if !path_str.is_empty() {
+                        let path = PathBuf::from(&path_str);
+                        if path.exists() {
+                            return path;
+                        }
                     }
                 }
             }
+            log::warn!("claude_cli_source is 'path' but could not find claude in PATH, falling back to Jean-managed binary");
         }
-        // Fallback: if PATH lookup fails, still return Jean-managed path
-        log::warn!("claude_cli_source is 'path' but could not find claude in PATH, falling back to Jean-managed binary");
+        _ => {}
     }
 
     get_cli_binary_path(app).unwrap_or_else(|_| PathBuf::from(CLI_DIR_NAME).join(CLI_BINARY_NAME))
 }
 
-/// Ensure the CLI directory exists, creating it if necessary
 pub fn ensure_cli_dir(app: &AppHandle) -> Result<PathBuf, String> {
     let cli_dir = get_cli_dir(app)?;
     std::fs::create_dir_all(&cli_dir)

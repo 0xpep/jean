@@ -3,6 +3,7 @@ import {
   Archive,
   Command,
   FileText,
+  FolderTree,
   Github,
   GitPullRequest,
   LayoutDashboard,
@@ -17,6 +18,12 @@ import {
 import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,6 +53,7 @@ import {
 import type { WorktreeSessions } from '@/types/chat'
 import { DEFAULT_KEYBINDINGS, formatShortcutDisplay } from '@/types/keybindings'
 import { getResumeCommand } from '@/components/chat/session-card-utils'
+import { FileExplorerPanel } from '@/components/projects/FileExplorerPanel'
 
 interface DockBurgerButtonProps {
   /** Number of enabled MCP servers; shown as a badge next to the MCP item. */
@@ -72,6 +80,18 @@ export function DockBurgerButton({
   const sessionChatModalWorktreeId = useUIStore(
     state => state.sessionChatModalWorktreeId
   )
+  // Debug: Check all sources for worktree ID
+  const debugWorktreeIdSources = {
+    sessionChatModalOpen,
+    sessionChatModalWorktreeId,
+    activeWorktreeId,
+    selectedWorktreeId,
+    currentWorktreeIdResolved: sessionChatModalOpen
+      ? (sessionChatModalWorktreeId ?? activeWorktreeId ?? selectedWorktreeId)
+      : (activeWorktreeId ?? selectedWorktreeId),
+  }
+  console.log('[DockBurgerButton] Worktree ID sources:', debugWorktreeIdSources)
+
   const currentWorktreeId = sessionChatModalOpen
     ? (sessionChatModalWorktreeId ?? activeWorktreeId ?? selectedWorktreeId)
     : (activeWorktreeId ?? selectedWorktreeId)
@@ -84,6 +104,7 @@ export function DockBurgerButton({
   )
 
   const [menuOpen, setMenuOpen] = useState(false)
+  const [fileExplorerOpen, setFileExplorerOpen] = useState(false)
   const [resumeCommand, setResumeCommand] = useState<string | null>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
 
@@ -316,6 +337,12 @@ export function DockBurgerButton({
           <FileText className="mr-2 h-4 w-4" />
           View Plan
         </DropdownMenuItem>
+        {currentWorktreeId && (
+          <DropdownMenuItem onClick={() => setFileExplorerOpen(true)}>
+            <FolderTree className="mr-2 h-4 w-4" />
+            Files
+          </DropdownMenuItem>
+        )}
         {isMobile && currentWorktreeId && (
           <>
             <DropdownMenuSeparator />
@@ -386,6 +413,24 @@ export function DockBurgerButton({
           </>
         )}
       </DropdownMenuContent>
+
+      <Dialog open={fileExplorerOpen} onOpenChange={setFileExplorerOpen}>
+        <DialogContent className="max-w-4xl h-[80vh] flex flex-col p-0 overflow-hidden gap-0">
+          <DialogHeader className="p-4 border-b">
+            <DialogTitle>File Explorer</DialogTitle>
+          </DialogHeader>
+          {currentWorktreeId ? (
+            <FileExplorerPanel
+              worktreeId={currentWorktreeId}
+              className="flex-1 border-0 rounded-tl-none rounded-tr-none"
+            />
+          ) : (
+            <div className="flex-1 flex items-center justify-center text-muted-foreground">
+              No worktree selected
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </DropdownMenu>
   )
 }

@@ -28,3 +28,9 @@ dist-ssr
 *.sln
 *.sw?
 .env
+<<<<<<< HEAD
+=======
+.worktrees/
+.aider.*
+>>>>>>> troubleshoot-tauri-build-error
+.aider*

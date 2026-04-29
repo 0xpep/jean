@@ -42,10 +42,12 @@ interface CliUpdateInfo {
   type: CliType
   currentVersion: string
   latestVersion: string
-  cliSource?: 'jean' | 'path'
+  cliSource?: 'jean' | 'path' | 'custom'
   cliPath?: string | null
   packageManager?: string | null
 }
+
+type CliSource = 'jean' | 'path' | 'custom'
 
 /**
  * Resolve the effective CLI version/path/source by falling back to path detection
@@ -64,11 +66,11 @@ function resolveCliInfo(
         package_manager?: string | null
       }
     | undefined,
-  preferredSource: 'jean' | 'path' | undefined
+  preferredSource: CliSource | undefined
 ): {
   version: string | null
   path: string | null
-  source: 'jean' | 'path'
+  source: CliSource
   packageManager: string | null
 } {
   if (status?.installed && status.version) {

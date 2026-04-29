@@ -79,6 +79,7 @@ import { SecurityAlertsBadge } from '@/components/shared/SecurityAlertsBadge'
 import { PlanDialog } from '@/components/chat/PlanDialog'
 import { RecapDialog } from '@/components/chat/RecapDialog'
 import { SessionChatModal } from '@/components/chat/SessionChatModal'
+import { ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable'
 
 import { LabelModal } from '@/components/chat/LabelModal'
 import { getLabelTextColor } from '@/lib/label-colors'
@@ -2234,79 +2235,87 @@ export function ProjectCanvasView({ projectId }: ProjectCanvasViewProps) {
         </div>
 
         {/* Canvas View */}
-        <div
-          className={`flex-1 pb-16 ${worktreeSections.length === 0 && !searchQuery ? '' : 'pt-5 px-4'}`}
-        >
-          {worktreeSections.length === 0 ? (
-            searchQuery ? (
-              <div className="flex h-full items-center justify-center text-muted-foreground">
-                No worktrees or sessions match your search
-              </div>
-            ) : (
-              <EmptyDashboardTabs
-                projectId={projectId}
-                projectPath={project?.path ?? null}
-              />
-            )
-          ) : (
-            <div className="flex flex-col gap-1">
-              {(() => {
-                let shortcutNum = 0
-                return worktreeSections.map(section => {
-                  const currentIndex = cardIndex++
-                  if (section.isPending) {
-                    return (
-                      <WorktreeSetupCard
-                        key={section.worktree.id}
-                        ref={el => {
-                          cardRefs.current[currentIndex] = el
-                        }}
-                        worktree={section.worktree}
-                        layout="list"
-                        isSelected={selectedIndex === currentIndex}
-                        onSelect={() => handleSelectedIndexChange(currentIndex)}
-                      />
-                    )
-                  }
-                  const thisShortcut =
-                    ++shortcutNum <= 9 ? shortcutNum : undefined
-                  return (
-                    <div
-                      key={section.worktree.id}
-                      ref={el => {
-                        cardRefs.current[currentIndex] = el
-                      }}
-                    >
-                      <WorktreeSectionHeader
-                        worktree={section.worktree}
-                        projectId={projectId}
-                        defaultBranch={project.default_branch}
-                        openPRs={openPRs}
-                        cards={section.cards}
-                        showDetails={true}
-                        isSelected={selectedIndex === currentIndex}
-                        shortcutNumber={thisShortcut}
-                        onRowClick={() => {
-                          handleSelectedIndexChange(currentIndex)
-                          handleWorktreeClick(
-                            section.worktree.id,
-                            section.worktree.path
-                          )
-                        }}
-                        onDiffClick={(worktreePath, baseBranch, type) => {
-                          setCanvasDiffRequest({
-                            type,
-                            worktreePath,
-                            baseBranch,
-                          })
-                        }}
-                      />
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <ResizablePanelGroup direction="horizontal" className="h-full">
+            <ResizablePanel defaultSize={70} minSize={30}>
+              <div
+                className={`h-full overflow-auto pb-16 ${worktreeSections.length === 0 && !searchQuery ? '' : 'pt-5 px-4'}`}
+              >
+                {worktreeSections.length === 0 ? (
+                  searchQuery ? (
+                    <div className="flex h-full items-center justify-center text-muted-foreground">
+                      No worktrees or sessions match your search
                     </div>
+                  ) : (
+                    <EmptyDashboardTabs
+                      projectId={projectId}
+                      projectPath={project?.path ?? null}
+                    />
                   )
-                })
-              })()}
-            </div>
-          )}
+                ) : (
+                  <div className="flex flex-col gap-1">
+                    {(() => {
+                      let shortcutNum = 0
+                      return worktreeSections.map(section => {
+                        const currentIndex = cardIndex++
+                        if (section.isPending) {
+                          return (
+                            <WorktreeSetupCard
+                              key={section.worktree.id}
+                              ref={el => {
+                                cardRefs.current[currentIndex] = el
+                              }}
+                              worktree={section.worktree}
+                              layout="list"
+                              isSelected={selectedIndex === currentIndex}
+                              onSelect={() =>
+                                handleSelectedIndexChange(currentIndex)
+                              }
+                            />
+                          )
+                        }
+                        const thisShortcut =
+                          ++shortcutNum <= 9 ? shortcutNum : undefined
+                        return (
+                          <div
+                            key={section.worktree.id}
+                            ref={el => {
+                              cardRefs.current[currentIndex] = el
+                            }}
+                          >
+                            <WorktreeSectionHeader
+                              worktree={section.worktree}
+                              projectId={projectId}
+                              defaultBranch={project.default_branch}
+                              openPRs={openPRs}
+                              cards={section.cards}
+                              showDetails={true}
+                              isSelected={selectedIndex === currentIndex}
+                              shortcutNumber={thisShortcut}
+                              onRowClick={() => {
+                                handleSelectedIndexChange(currentIndex)
+                                handleWorktreeClick(
+                                  section.worktree.id,
+                                  section.worktree.path
+                                )
+                              }}
+                              onDiffClick={(worktreePath, baseBranch, type) => {
+                                setCanvasDiffRequest({
+                                  type,
+                                  worktreePath,
+                                  baseBranch,
+                                })
+                              }}
+                            />
+                          </div>
+                        )
+                      })
+                    })()}
+                  </div>
+                )}
+              </div>
+            </ResizablePanel>
+          </ResizablePanelGroup>
         </div>
       </div>
 

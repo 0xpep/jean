@@ -600,3 +600,30 @@ pub struct WorktreeBranchExistsEvent {
     /// Advisory context to use when creating a new worktree with the suggested name
     pub advisory_context: Option<super::github_issues::AdvisoryContext>,
 }
+
+// =============================================================================
+// File Explorer Types (for worktree file navigation)
+// =============================================================================
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FileTreeNode {
+    pub relative_path: String,
+    pub name: String,
+    pub node_type: String,
+    pub depth: u32,
+    pub has_children: Option<bool>,
+    pub extension: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FileTreeResponse {
+    pub root: String,
+    pub nodes: Vec<FileTreeNode>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FileSearchResult {
+    pub relative_path: String,
+    pub name: String,
+    pub node_type: String,
+}

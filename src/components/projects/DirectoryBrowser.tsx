@@ -69,14 +69,26 @@ export function DirectoryBrowser({
     const requestId = ++requestIdRef.current
     setIsLoading(true)
 
+    console.log('[DirectoryBrowser] loadDirectory', { path, requestId })
+
     try {
       const next = await invoke<BrowseDirectoryResult>('browse_directory', {
         path,
       })
+      console.log('[DirectoryBrowser] invoke result', {
+        next,
+        requestId,
+        currentRequestId: requestIdRef.current,
+      })
       if (requestId !== requestIdRef.current) return
       setResult(next)
-      setPathInput(next.current_path)
+      setPathInput(next.currentPath)
     } catch (error) {
+      console.error('[DirectoryBrowser] invoke error', {
+        error,
+        requestId,
+        currentRequestId: requestIdRef.current,
+      })
       if (requestId !== requestIdRef.current) return
       const message =
         typeof error === 'string'
@@ -97,11 +109,17 @@ export function DirectoryBrowser({
     void loadDirectory()
   }, [loadDirectory, open])
 
-  const visibleEntries = useMemo(
-    () =>
-      (result?.entries ?? []).filter(entry => showHidden || !entry.is_hidden),
-    [result?.entries, showHidden]
-  )
+  const visibleEntries = useMemo(() => {
+    const entries = (result?.entries ?? []).filter(
+      entry => showHidden || !entry.isHidden
+    )
+    console.log('[DirectoryBrowser] visibleEntries', {
+      total: result?.entries?.length,
+      visible: entries.length,
+      showHidden,
+    })
+    return entries
+  }, [result?.entries, showHidden])
 
   const handleNavigate = useCallback(
     async (path?: string) => {
@@ -113,7 +131,7 @@ export function DirectoryBrowser({
   const handleConfirm = useCallback(() => {
     if (!result) return
     if (mode === 'select') {
-      onSelect(result.current_path)
+      onSelect(result.currentPath)
       onOpenChange(false)
       return
     }
@@ -124,7 +142,7 @@ export function DirectoryBrowser({
       return
     }
 
-    onSelect(buildSavePath(result.current_path, trimmedName))
+    onSelect(buildSavePath(result.currentPath, trimmedName))
     onOpenChange(false)
   }, [mode, nameInput, onOpenChange, onSelect, result])
 
@@ -133,7 +151,7 @@ export function DirectoryBrowser({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="!w-screen !h-dvh !max-w-screen !max-h-none !rounded-none sm:!w-auto sm:!max-w-2xl sm:!h-auto sm:!max-h-[85vh] sm:!rounded-lg flex flex-col overflow-hidden">
+      <DialogContent className="!w-screen !max-w-screen !rounded-none sm:!w-auto sm:!max-w-2xl sm:!h-auto sm:!max-h-[85vh] sm:!rounded-lg flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle>{title ?? 'Browse directories'}</DialogTitle>
           <DialogDescription>
@@ -192,7 +210,7 @@ export function DirectoryBrowser({
             <p className="text-xs text-muted-foreground break-all">
               Will use:{' '}
               <span className="font-mono">
-                {buildSavePath(result.current_path, nameInput)}
+                {buildSavePath(result.currentPath, nameInput)}
               </span>
             </p>
           )}
@@ -200,17 +218,17 @@ export function DirectoryBrowser({
           <div className="rounded-lg border">
             <ScrollArea className="h-60 sm:h-72">
               <div className="p-2">
-                {result?.parent_path && (
+                {result?.parentPath && (
                   <DirectoryRow
                     entry={{
                       name: '..',
-                      path: result.parent_path,
-                      is_dir: true,
-                      is_git_repo: false,
-                      is_hidden: false,
+                      path: result.parentPath,
+                      isDir: true,
+                      isGitRepo: false,
+                      isHidden: false,
                     }}
                     icon={<ChevronUp className="h-4 w-4" />}
-                    onClick={() => void handleNavigate(result.parent_path)}
+                    onClick={() => void handleNavigate(result.parentPath)}
                   />
                 )}
 
@@ -271,7 +289,7 @@ function DirectoryRow({
     >
       <span className="text-muted-foreground">
         {icon ??
-          (entry.is_git_repo ? (
+          (entry.isGitRepo ? (
             <FolderGit2 className="h-4 w-4" />
           ) : (
             <Folder className="h-4 w-4" />

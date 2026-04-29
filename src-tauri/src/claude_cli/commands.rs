@@ -884,6 +884,14 @@ async fn refresh_claude_access_token(
 pub async fn check_claude_cli_auth(app: AppHandle) -> Result<ClaudeAuthStatus, String> {
     log::trace!("Checking Claude CLI authentication status");
 
+    let bypass = crate::load_preferences_sync(&app)
+        .map(|prefs| prefs.bypass_claude_auth)
+        .unwrap_or(false);
+    if bypass {
+        log::debug!("Claude auth check bypassed via preferences");
+        return Ok(ClaudeAuthStatus { authenticated: true, error: None });
+    }
+
     let binary_path = resolve_cli_binary(&app);
 
     if !binary_path.exists() {

@@ -33,90 +33,78 @@ pub fn get_cli_binary_path(app: &AppHandle) -> Result<PathBuf, String> {
 
 /// Resolve Codex binary path based on the user's preference.
 ///
-/// If `codex_cli_source` preference is `"path"`, look up `codex` in system PATH.
-/// Otherwise (default `"jean"`), use the Jean-managed binary.
+/// - "jean" (default): use the Jean-managed binary.
+/// - "path": look up the binary in system PATH.
+/// - "custom": use the custom path from `codex_cli_custom_path` preference.
 pub fn resolve_cli_binary(app: &AppHandle) -> PathBuf {
-    let use_path = match crate::get_preferences_path(app) {
+    let source = match crate::get_preferences_path(app) {
         Ok(prefs_path) => {
             if let Ok(contents) = std::fs::read_to_string(&prefs_path) {
                 if let Ok(prefs) = serde_json::from_str::<crate::AppPreferences>(&contents) {
-                    log::debug!(
-                        "resolve_cli_binary: codex_cli_source={:?}",
-                        prefs.codex_cli_source
-                    );
-                    prefs.codex_cli_source == "path"
-                } else {
-                    log::debug!(
-                        "resolve_cli_binary: failed to parse preferences, defaulting to jean"
-                    );
-                    false
-                }
-            } else {
-                log::debug!(
-                    "resolve_cli_binary: failed to read preferences file, defaulting to jean"
-                );
-                false
-            }
-        }
-        Err(e) => {
-            log::debug!(
-                "resolve_cli_binary: failed to get preferences path: {e}, defaulting to jean"
-            );
-            false
-        }
-    };
+                    prefs.codex_cli_source
+                 } else {
+                     "jean".to_string()
+                 }
+             } else {
+                 "jean".to_string()
+             }
+         }
+        Err(_) => "jean".to_string(),
+     };
 
-    if use_path {
-        let which_cmd = if cfg!(target_os = "windows") {
-            "where"
-        } else {
-            "which"
-        };
+    match source.as_str() {
+         "custom" => {
+            let custom_path = match crate::get_preferences_path(app) {
+                Ok(prefs_path) => {
+                    if let Ok(contents) = std::fs::read_to_string(&prefs_path) {
+                        if let Ok(prefs) = serde_json::from_str::<crate::AppPreferences>(&contents) {
+                            prefs.codex_cli_custom_path
+                         } else {
+                            String::new()
+                         }
+                     } else {
+                        String::new()
+                     }
+                 }
+                Err(_) => String::new(),
+             };
+            if !custom_path.is_empty() && std::path::Path::new(&custom_path).exists() {
+                log::debug!("codex_cli_source is 'custom', using: {:?}", custom_path);
+                return PathBuf::from(&custom_path);
+             }
+            log::warn!("codex_cli_source is 'custom' but path is empty or does not exist");
+         }
+         "path" => {
+             let which_cmd = if cfg!(target_os = "windows") {
+                  "where"
+              } else {
+                  "which"
+              };
 
-        match silent_command(which_cmd).arg("codex").output() {
-            Ok(output) => {
-                log::debug!(
-                    "resolve_cli_binary: `{which_cmd} codex` exit_status={}, stdout={:?}",
-                    output.status,
-                    String::from_utf8_lossy(&output.stdout).trim()
-                );
-                if output.status.success() {
-                    // On Windows, `where` can return multiple paths; take only the first line
-                    let path_str = String::from_utf8_lossy(&output.stdout)
-                        .lines()
-                        .next()
-                        .unwrap_or("")
-                        .trim()
-                        .to_string();
-                    if !path_str.is_empty() {
-                        let path = PathBuf::from(&path_str);
-                        if path.exists() {
-                            log::debug!("resolve_cli_binary: resolved to PATH binary: {path_str}");
-                            return path;
-                        } else {
-                            log::debug!("resolve_cli_binary: PATH binary does not exist on disk: {path_str}");
-                        }
-                    } else {
-                        log::debug!(
-                            "resolve_cli_binary: `{which_cmd} codex` returned empty output"
-                        );
-                    }
-                }
-            }
-            Err(e) => {
-                log::debug!("resolve_cli_binary: `{which_cmd} codex` failed to execute: {e}");
-            }
-        }
-        log::warn!("codex_cli_source is 'path' but could not find codex in PATH, falling back to Jean-managed binary");
-    }
+             if let Ok(output) = silent_command(which_cmd).arg(CLI_BINARY_NAME).output() {
+                 if output.status.success() {
+                      let path_str = String::from_utf8_lossy(&output.stdout)
+                           .lines()
+                           .next()
+                           .unwrap_or("")
+                           .trim()
+                           .to_string();
+                      if !path_str.is_empty() {
+                          let path = PathBuf::from(&path_str);
+                          if path.exists() {
+                              return path;
+                           }
+                      }
+                  }
+              }
+             log::warn!("codex_cli_source is 'path' but could not find binary in PATH, falling back to Jean-managed binary");
+         }
+         _ => {}
+     }
 
-    let fallback = get_cli_binary_path(app)
-        .unwrap_or_else(|_| PathBuf::from(CLI_DIR_NAME).join(CLI_BINARY_NAME));
-    log::debug!("resolve_cli_binary: using jean-managed binary: {fallback:?}");
-    fallback
+    get_cli_binary_path(app).unwrap_or_else(|_| PathBuf::from(CLI_DIR_NAME).join(CLI_BINARY_NAME))
 }
 
-/// Ensure the CLI directory exists, creating it if necessary
 pub fn ensure_cli_dir(app: &AppHandle) -> Result<PathBuf, String> {
     let cli_dir = get_cli_dir(app)?;
     std::fs::create_dir_all(&cli_dir)

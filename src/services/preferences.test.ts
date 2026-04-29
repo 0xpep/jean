@@ -161,7 +161,12 @@ describe('preferences service', () => {
         codex_cli_source: 'jean',
         opencode_cli_source: 'jean',
         gh_cli_source: 'jean',
+        gh_cli_custom_path: '',
+        claude_cli_custom_path: '',
+        codex_cli_custom_path: '',
+        opencode_cli_custom_path: '',
         expand_tool_calls_by_default: false,
+        bypass_claude_auth: false,
       }
       vi.mocked(invoke).mockResolvedValueOnce(mockPreferences)
 
@@ -288,7 +293,12 @@ describe('preferences service', () => {
         codex_cli_source: 'jean',
         opencode_cli_source: 'jean',
         gh_cli_source: 'jean',
+        gh_cli_custom_path: '',
+        claude_cli_custom_path: '',
+        codex_cli_custom_path: '',
+        opencode_cli_custom_path: '',
         expand_tool_calls_by_default: false,
+        bypass_claude_auth: false,
       }
       vi.mocked(invoke).mockResolvedValueOnce(prefsWithOldBinding)
 
@@ -388,7 +398,12 @@ describe('preferences service', () => {
         codex_cli_source: 'jean',
         opencode_cli_source: 'jean',
         gh_cli_source: 'jean',
+        gh_cli_custom_path: '',
+        claude_cli_custom_path: '',
+        codex_cli_custom_path: '',
+        opencode_cli_custom_path: '',
         expand_tool_calls_by_default: false,
+        bypass_claude_auth: false,
       }
       vi.mocked(invoke).mockResolvedValueOnce(prefsWithDeprecatedFastModel)
 
@@ -488,7 +503,12 @@ describe('preferences service', () => {
         codex_cli_source: 'jean',
         opencode_cli_source: 'jean',
         gh_cli_source: 'jean',
+        gh_cli_custom_path: '',
+        claude_cli_custom_path: '',
+        codex_cli_custom_path: '',
+        opencode_cli_custom_path: '',
         expand_tool_calls_by_default: false,
+        bypass_claude_auth: false,
       }
 
       const { result } = renderHook(() => useSavePreferences(), {
@@ -590,7 +610,12 @@ describe('preferences service', () => {
         codex_cli_source: 'jean',
         opencode_cli_source: 'jean',
         gh_cli_source: 'jean',
+        gh_cli_custom_path: '',
+        claude_cli_custom_path: '',
+        codex_cli_custom_path: '',
+        opencode_cli_custom_path: '',
         expand_tool_calls_by_default: false,
+        bypass_claude_auth: false,
       }
 
       const { result } = renderHook(() => useSavePreferences(), {
@@ -692,7 +717,12 @@ describe('preferences service', () => {
         codex_cli_source: 'jean',
         opencode_cli_source: 'jean',
         gh_cli_source: 'jean',
+        gh_cli_custom_path: '',
+        claude_cli_custom_path: '',
+        codex_cli_custom_path: '',
+        opencode_cli_custom_path: '',
         expand_tool_calls_by_default: false,
+        bypass_claude_auth: false,
       }
 
       const { result } = renderHook(() => useSavePreferences(), {
@@ -792,7 +822,12 @@ describe('preferences service', () => {
         codex_cli_source: 'jean',
         opencode_cli_source: 'jean',
         gh_cli_source: 'jean',
+        gh_cli_custom_path: '',
+        claude_cli_custom_path: '',
+        codex_cli_custom_path: '',
+        opencode_cli_custom_path: '',
         expand_tool_calls_by_default: false,
+        bypass_claude_auth: false,
       }
 
       const { result } = renderHook(() => useSavePreferences(), {

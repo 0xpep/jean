@@ -39,11 +39,11 @@ use super::release_notes::{
 };
 use super::storage::{get_project_worktrees_dir, load_projects_data, save_projects_data};
 use super::types::{
-    JeanConfig, MergeType, Project, SessionType, Worktree, WorktreeArchivedEvent,
-    WorktreeBranchExistsEvent, WorktreeCreateErrorEvent, WorktreeCreatedEvent,
-    WorktreeCreatingEvent, WorktreeDeleteErrorEvent, WorktreeDeletedEvent, WorktreeDeletingEvent,
-    WorktreePathExistsEvent, WorktreePermanentlyDeletedEvent, WorktreeSetupCompleteEvent,
-    WorktreeUnarchivedEvent,
+    FileSearchResult, FileTreeNode, FileTreeResponse, JeanConfig, MergeType, Project, SessionType,
+    Worktree, WorktreeArchivedEvent, WorktreeBranchExistsEvent, WorktreeCreateErrorEvent,
+    WorktreeCreatedEvent, WorktreeCreatingEvent, WorktreeDeleteErrorEvent, WorktreeDeletedEvent,
+    WorktreeDeletingEvent, WorktreePathExistsEvent, WorktreePermanentlyDeletedEvent,
+    WorktreeSetupCompleteEvent, WorktreeUnarchivedEvent,
 };
 use crate::claude_cli::resolve_cli_binary;
 use crate::codex_cli::resolve_cli_binary as resolve_codex_cli_binary;
@@ -185,6 +185,7 @@ pub struct GitIdentity {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct DirEntry {
     pub name: String,
     pub path: String,
@@ -194,6 +195,7 @@ pub struct DirEntry {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct BrowseDirectoryResult {
     pub current_path: String,
     pub parent_path: Option<String>,
@@ -202,21 +204,33 @@ pub struct BrowseDirectoryResult {
 
 #[tauri::command]
 pub async fn browse_directory(path: Option<String>) -> Result<BrowseDirectoryResult, String> {
+    log::info!("Browsing directory: {path:?}");
     let requested_path = path
+        .filter(|p| !p.trim().is_empty())
         .map(PathBuf::from)
         .or_else(dirs::home_dir)
         .ok_or_else(|| "No home directory found".to_string())?;
 
+    log::info!("Requested path: {}", requested_path.display());
+
     let current_path = requested_path
         .canonicalize()
-        .map_err(|e| format!("Failed to access directory: {e}"))?;
+        .map_err(|e| {
+            let err = format!("Failed to access directory {}: {e}", requested_path.display());
+            log::error!("{err}");
+            err
+        })?;
 
     if !current_path.is_dir() {
-        return Err(format!(
+        let err = format!(
             "Path is not a directory: {}",
             current_path.display()
-        ));
+        );
+        log::error!("{err}");
+        return Err(err);
     }
+
+    log::info!("Canonical path: {}", current_path.display());
 
     let parent_path = current_path
         .parent()
@@ -224,28 +238,40 @@ pub async fn browse_directory(path: Option<String>) -> Result<BrowseDirectoryRes
     let mut entries = Vec::new();
 
     let read_dir = std::fs::read_dir(&current_path)
-        .map_err(|e| format!("Failed to read directory {}: {e}", current_path.display()))?;
+        .map_err(|e| {
+            let err = format!("Failed to read directory {}: {e}", current_path.display());
+            log::error!("{err}");
+            err
+        })?;
 
     for entry_result in read_dir {
         if entries.len() >= 500 {
+            log::warn!("Reached maximum entry limit (500) for {}", current_path.display());
             break;
         }
 
         let entry = match entry_result {
             Ok(entry) => entry,
-            Err(error) if error.kind() == std::io::ErrorKind::PermissionDenied => continue,
-            Err(error) => return Err(format!("Failed to read directory entry: {error}")),
+            Err(error) if error.kind() == std::io::ErrorKind::PermissionDenied => {
+                log::warn!("Permission denied for entry in {}", current_path.display());
+                continue;
+            }
+            Err(error) => {
+                log::error!("Failed to read directory entry in {}: {error}", current_path.display());
+                return Err(format!("Failed to read directory entry: {error}"));
+            }
         };
 
         let path = entry.path();
         let metadata = match entry.metadata() {
             Ok(metadata) => metadata,
-            Err(error) if error.kind() == std::io::ErrorKind::PermissionDenied => continue,
+            Err(error) if error.kind() == std::io::ErrorKind::PermissionDenied => {
+                log::warn!("Permission denied for metadata of {}", path.display());
+                continue;
+            }
             Err(error) => {
-                return Err(format!(
-                    "Failed to read metadata for {}: {error}",
-                    path.display()
-                ))
+                log::warn!("Failed to read metadata for {}: {error}", path.display());
+                continue; // Skip entries we can't read metadata for
             }
         };
 
@@ -264,6 +290,8 @@ pub async fn browse_directory(path: Option<String>) -> Result<BrowseDirectoryRes
             is_hidden,
         });
     }
+
+    log::info!("Found {} directories in {}", entries.len(), current_path.display());
 
     entries.sort_by(|a, b| match (a.is_hidden, b.is_hidden) {
         (false, true) => std::cmp::Ordering::Less,
@@ -9835,9 +9863,218 @@ pub async fn revert_last_local_commit(
     })
 }
 
+#[tauri::command]
+pub async fn list_worktree_file_tree(
+    app: AppHandle,
+    worktree_id: String,
+    relative_path: Option<String>,
+    respect_gitignore: Option<bool>,
+) -> Result<FileTreeResponse, String> {
+    let root = resolve_worktree_root(&app, &worktree_id)?;
+    let subtree = relative_path
+        .as_deref()
+        .map(normalize_relative_worktree_path)
+        .transpose()?
+        .map(|path| root.join(path))
+        .unwrap_or_else(|| root.clone());
+
+    if !subtree.exists() {
+        return Err(format!("Path does not exist: {}", subtree.display()));
+    }
+
+    let mut nodes = Vec::new();
+    let respect_gitignore = respect_gitignore.unwrap_or(true);
+    let walker = ignore::WalkBuilder::new(&subtree)
+        .hidden(false)
+        .git_ignore(respect_gitignore)
+        .git_global(respect_gitignore)
+        .git_exclude(respect_gitignore)
+        .sort_by_file_name(|a, b| a.cmp(b))
+        .build();
+
+    for result in walker {
+        let entry = result.map_err(|e| format!("Walk error: {e}"))?;
+        let path = entry.path();
+
+        if path == subtree {
+            continue;
+        }
+
+        let rel = path.strip_prefix(&root).map_err(|e| e.to_string())?;
+        let name = path
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_string();
+        let depth = rel.components().count() as u32;
+        let is_dir = path.is_dir();
+        let extension = path
+            .extension()
+            .map(|e| e.to_string_lossy().to_string());
+
+        nodes.push(FileTreeNode {
+            relative_path: rel.to_string_lossy().to_string(),
+            name,
+            node_type: if is_dir { "directory" } else { "file" }.to_string(),
+            depth,
+            has_children: if is_dir { Some(true) } else { None },
+            extension,
+        });
+    }
+
+    Ok(FileTreeResponse {
+        root: root.to_string_lossy().to_string(),
+        nodes,
+    })
+}
+
+#[tauri::command]
+pub async fn search_worktree_files(
+    app: AppHandle,
+    worktree_id: String,
+    query: String,
+) -> Result<Vec<FileSearchResult>, String> {
+    let root = resolve_worktree_root(&app, &worktree_id)?;
+
+    let output = silent_command("fd")
+        .arg("--type")
+        .arg("f")
+        .arg("--type")
+        .arg("d")
+        .arg("--all")
+        .arg("--git-ignore")
+        .arg(&query)
+        .current_dir(&root)
+        .output()
+        .map_err(|e| format!("Failed to run fd: {e}"))?;
+
+    if !output.status.success() {
+        // fd returns 1 if no matches found, which is not an error for us
+        if output.status.code() == Some(1) {
+            return Ok(Vec::new());
+        }
+        return Err(format!(
+            "fd failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        ));
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let results = stdout
+        .lines()
+        .filter(|line| !line.is_empty())
+        .map(|line| {
+            let abs_path = root.join(line);
+            let name = abs_path
+                .file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_string();
+            FileSearchResult {
+                relative_path: line.to_string(),
+                name,
+                node_type: if abs_path.is_dir() {
+                    "directory"
+                } else {
+                    "file"
+                }
+                .to_string(),
+            }
+        })
+        .collect();
+
+    Ok(results)
+}
+
+#[tauri::command]
+pub async fn read_worktree_markdown(
+    app: AppHandle,
+    worktree_id: String,
+    relative_path: String,
+) -> Result<String, String> {
+    let root = resolve_worktree_root(&app, &worktree_id)?;
+    let rel = normalize_relative_worktree_path(&relative_path)?;
+    let full_path = root.join(&rel);
+
+    if !is_markdown_path(&full_path) {
+        return Err("Only markdown files can be read/written via this command".to_string());
+    }
+
+    std::fs::read_to_string(full_path).map_err(|e| format!("Failed to read file: {e}"))
+}
+
+#[tauri::command]
+pub async fn write_worktree_markdown(
+    app: AppHandle,
+    worktree_id: String,
+    relative_path: String,
+    content: String,
+) -> Result<(), String> {
+    let root = resolve_worktree_root(&app, &worktree_id)?;
+    let rel = normalize_relative_worktree_path(&relative_path)?;
+    let full_path = root.join(&rel);
+
+    if !is_markdown_path(&full_path) {
+        return Err("Only markdown files can be read/written via this command".to_string());
+    }
+
+    // Ensure parent directory exists
+    if let Some(parent) = full_path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| format!("Failed to create directories: {e}"))?;
+    }
+
+    std::fs::write(full_path, content).map_err(|e| format!("Failed to write file: {e}"))
+}
+
+fn is_markdown_path(path: &Path) -> bool {
+    matches!(
+        path.extension().and_then(|ext| ext.to_str()),
+        Some("md") | Some("markdown")
+    )
+}
+
+fn normalize_relative_worktree_path(input: &str) -> Result<PathBuf, String> {
+    let path = PathBuf::from(input);
+    if path.is_absolute() {
+        return Err("Path must be relative to worktree root".to_string());
+    }
+
+    if path
+        .components()
+        .any(|component| matches!(component, std::path::Component::ParentDir))
+    {
+        return Err("Path cannot escape worktree root".to_string());
+    }
+
+    Ok(path)
+}
+
+fn resolve_worktree_root(app: &AppHandle, worktree_id: &str) -> Result<PathBuf, String> {
+    let data = load_projects_data(app)?;
+    let worktree = data
+        .worktrees
+        .iter()
+        .find(|w| w.id == worktree_id)
+        .ok_or_else(|| format!("Worktree not found: {worktree_id}"))?;
+    Ok(PathBuf::from(&worktree.path))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn markdown_extensions_are_allowed() {
+        assert!(is_markdown_path(Path::new("README.md")));
+        assert!(is_markdown_path(Path::new("docs/notes.markdown")));
+        assert!(!is_markdown_path(Path::new("src/main.rs")));
+    }
+
+    #[test]
+    fn rejects_parent_escape_segments() {
+        assert!(normalize_relative_worktree_path("../secret.md").is_err());
+        assert!(normalize_relative_worktree_path("docs/../../secret.md").is_err());
+    }
 
     #[test]
     fn test_sanitize_folder_name() {

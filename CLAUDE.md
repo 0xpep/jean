@@ -1,12 +1,12 @@
 # Claude Instructions
 
-## Current Status
-
-@CLAUDE.local.md
-
 ## Overview
 
 This repository is a template with sensible defaults for building Tauri React apps.
+
+## Source Code Map
+
+Reference following file before making code exploring decision: @detailed_map_2k.md
 
 ## Core Rules
 
